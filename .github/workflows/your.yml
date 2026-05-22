@@ -1,4 +1,4 @@
-name: TruffleHog Secret Scan
+name: GitGuardian Secret Scan
  
 on:
   push:
@@ -8,12 +8,13 @@ on:
   workflow_dispatch:
  
 jobs:
-  trufflehog:
-    name: TruffleHog Scan
+  gitguardian-scan:
+    name: GitGuardian Scan
     runs-on: ubuntu-latest
  
     permissions:
       contents: read
+      security-events: write
  
     steps:
       - name: Checkout Repository
@@ -21,34 +22,8 @@ jobs:
         with:
           fetch-depth: 0
  
-      - name: Pull TruffleHog Image
-        run: docker pull trufflesecurity/trufflehog:latest
- 
-      - name: Run TruffleHog Scan
-        run: |
-          docker run --rm \
-            -v "$PWD:/repo" \
-            trufflesecurity/trufflehog:latest \
-            git file:///repo \
-            --results=verified,unknown \
-            --json > trufflehog-report.json || true
- 
-      - name: Display Report
-        run: |
-          echo "- TruffleHog Findings -"
-          cat trufflehog-report.json
- 
-      - name: Upload Scan Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trufflehog-report
-          path: trufflehog-report.json
- 
-      - name: Fail Pipeline If Secrets Found
-        run: |
-          if [ -s trufflehog-report.json ]; then
-            echo "Secrets detected!"
-            exit 1
-          else
-            echo "No secrets found."
-          fi
+      - name: Run GitGuardian Scan
+        uses: GitGuardian/ggshield/actions/secret@v1.37.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
